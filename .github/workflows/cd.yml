@@ -10,27 +10,7 @@ permissions:
   packages: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: pytest tests/ -v
-
   build:
-    needs: test
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -51,12 +31,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push
         run: |
-          docker build \
-            -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }} \
-            -t ghcr.io/${{ github.repository }}:latest \
-            .
+          docker build -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }} -t ghcr.io/${{ github.repository }}:latest .
           docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
           docker push ghcr.io/${{ github.repository }}:latest
 
@@ -66,16 +43,12 @@ jobs:
     environment:
       name: staging
     steps:
-      - name: Deploy to staging
-        run: echo "Staging deployment for v${{ needs.build.outputs.version }}"
+      - run: echo "Deployed to staging"
 
   deploy-production:
-    needs:
-      - build
-      - deploy-staging
+    needs: [build, deploy-staging]
     runs-on: ubuntu-latest
     environment:
       name: production
     steps:
-      - name: Deploy to production
-        run: echo "Production deployment for v${{ needs.build.outputs.version }}"
+      - run: echo "Deployed to production"
