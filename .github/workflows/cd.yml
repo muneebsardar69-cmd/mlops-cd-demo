@@ -13,19 +13,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run tests
-        run: python -m pytest tests/ -v --tb=short || true
+      - run: pip install -r requirements.txt
+      - run: python -m pytest tests/ -v
 
   build:
     needs: test
@@ -33,28 +26,18 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get version
-        id: version
+      - uses: actions/checkout@v4
+      - id: version
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        run: |
-          docker build \
-            -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }} \
-            -t ghcr.io/${{ github.repository }}:latest \
-            .
+      - run: |
+          docker build -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }} -t ghcr.io/${{ github.repository }}:latest .
           docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
           docker push ghcr.io/${{ github.repository }}:latest
 
@@ -64,25 +47,13 @@ jobs:
     environment:
       name: staging
     steps:
-      - name: Deploy to staging
-        run: echo "Deploying to staging - version ${{ needs.build.outputs.version }}"
-
-      - name: Health check - Smoke test
-        run: |
-          echo "Running smoke test on staging..."
-          sleep 2
-          echo "Health check would run: curl http://staging-server:5000/health"
+      - run: echo "Deploying v${{ needs.build.outputs.version }} to staging"
+      - run: echo "Smoke test - Health endpoint validation"
 
   deploy-production:
-    needs:
-      - build
-      - deploy-staging
+    needs: [build, deploy-staging]
     runs-on: ubuntu-latest
     environment:
       name: production
     steps:
-      - name: Deploy to production
-        run: echo "Deploying to production - version ${{ needs.build.outputs.version }}"
-
-      - name: Production health check
-        run: echo "Health check: all systems operational"
+      - run: echo "Deploying v${{ needs.build.outputs.version }} to production"
