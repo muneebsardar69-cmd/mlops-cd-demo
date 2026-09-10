@@ -3,9 +3,10 @@ import subprocess
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
+APPLICATION_VERSION = "1.1.0"
 MODEL_VERSION = "1.1"
+DATASET_VERSION = "transactions-v1"
 
-# Get git commit hash
 try:
     GIT_COMMIT = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode().strip()
 except:
@@ -13,16 +14,14 @@ except:
 
 @app.route("/")
 def home():
-    return jsonify({
-        "service": "mlops-demo",
-        "status": "running"
-    })
+    return jsonify({"service": "mlops-demo", "status": "running"})
 
 @app.route("/health")
 def health():
     return jsonify({
-        "application_version": "1.1.0",
+        "application_version": APPLICATION_VERSION,
         "model_version": MODEL_VERSION,
+        "dataset_version": DATASET_VERSION,
         "git_commit": GIT_COMMIT,
         "status": "healthy"
     })
@@ -31,10 +30,9 @@ def health():
 def predict():
     data = request.get_json()
     value = float(data["value"])
-    prediction = value * 2
     return jsonify({
         "input": value,
-        "prediction": prediction,
+        "prediction": value * 2,
         "model_version": MODEL_VERSION
     })
 
