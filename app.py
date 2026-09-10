@@ -1,7 +1,15 @@
+import os
+import subprocess
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 MODEL_VERSION = "1.1"
+
+# Get git commit hash
+try:
+    GIT_COMMIT = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode().strip()
+except:
+    GIT_COMMIT = "unknown"
 
 @app.route("/")
 def home():
@@ -13,15 +21,16 @@ def home():
 @app.route("/health")
 def health():
     return jsonify({
-        "status": "healthy",
-        "model_version": MODEL_VERSION
+        "application_version": "1.1.0",
+        "model_version": MODEL_VERSION,
+        "git_commit": GIT_COMMIT,
+        "status": "healthy"
     })
 
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()
     value = float(data["value"])
-    # Dummy ML prediction for teaching
     prediction = value * 2
     return jsonify({
         "input": value,
